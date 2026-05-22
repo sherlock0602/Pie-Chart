@@ -278,11 +278,11 @@
                 this.tbody = document.getElementById(config.tbodyId);
                 this.addBtn = document.getElementById(config.addBtnId);
                 
+                
                 // 新增項目按鈕事件
                 this.addBtn.addEventListener('click', () => {
-                    if(this.customItems.length >= 10) { alert("最多只能新增 10 個項目喔！"); return; }
-                    this.customItems.push({ label: `新項目${this.customItems.length + 1}`, value: 0 });
-                    this.renderCustomTable();
+                this.customItems.push({ label: `新項目${this.customItems.length + 1}`, value: 0 });
+                this.renderCustomTable();
                 });
                 
                 // 連動標題
