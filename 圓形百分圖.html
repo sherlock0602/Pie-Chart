@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>互動式圓形百分圖 (進階教學與自訂版)</title>
+    <style>
+        body {
+            font-family: "Microsoft JhengHei", sans-serif;
+            background-color: #f0f4f8;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .app-container {
+            width: 100%;
+            max-width: 1300px;
+            background: #fff;
+            padding: 20px 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        /* --- 分頁系統樣式 --- */
+        .tabs-header {
+            display: flex;
+            border-bottom: 3px solid #1976d2;
+            margin-bottom: 20px;
+        }
+        .tab-btn {
+            background-color: #e3f2fd;
+            border: none;
+            padding: 12px 24px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #1976d2;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            margin-right: 8px;
+            transition: all 0.3s;
+        }
+        .tab-btn:hover { background-color: #bbdefb; }
+        .tab-btn.active {
+            background-color: #1976d2;
+            color: white;
+        }
+        .tab-content { display: none; width: 100%; }
+        .tab-content.active { display: block; }
+        /* ------------------- */
+
+        .question-box {
+            background-color: #e3f2fd;
+            border-left: 6px solid #1976d2;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 19px;
+            font-family: "DFKai-SB", "BiauKai", "標楷體", sans-serif;
+            font-weight: bold;
+        }
+        .content-grid {
+            display: grid;
+            grid-template-columns: 0.8fr 1.3fr 1.6fr; 
+            gap: 20px;
+            align-items: flex-start;
+        }
+        .section-title {
+            color: #1976d2;
+            border-bottom: 2px solid #bbdefb;
+            padding-bottom: 8px;
+            margin-top: 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: center;
+            font-size: 15px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+        }
+        th { background-color: #f5f5f5; }
+        input[type="number"], input[type="text"] {
+            width: 50px;
+            padding: 5px;
+            text-align: center;
+            font-size: 15px;
+        }
+        .total-row { font-weight: bold; background-color: #fafafa; }
+        .calc-box {
+            background: #fffdf5;
+            border: 1px solid #ffe082;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 16px;
+            line-height: 1.8;
+            min-height: 380px;
+            box-sizing: border-box;
+        }
+        .chart-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        canvas {
+            background-color: transparent;
+            max-width: 100%;
+            margin-top: -15px; 
+        }
+        .chart-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-top: 5px; 
+            text-align: center;
+        }
+        button.action-btn {
+            margin-top: 20px;
+            background-color: #1976d2;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-weight: bold;
+        }
+        button.action-btn:hover { background-color: #115293; }
+        button.action-btn:disabled { background-color: #90caf9; cursor: not-allowed; }
+        
+        .add-btn {
+            background-color: #4caf50; color: white; border: none; padding: 8px 12px;
+            font-size: 15px; border-radius: 4px; cursor: pointer; font-weight: bold;
+            margin-bottom: 10px; width: 100%;
+        }
+        .add-btn:hover { background-color: #388e3c; }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .legend-item { display: flex; align-items: center; gap: 5px; font-size: 14px; }
+        .color-box { width: 15px; height: 15px; border-radius: 3px; border: 1px solid #333; }
+        .alert-box {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-family: "Microsoft JhengHei", sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="tabs-header">
+        <button class="tab-btn active" onclick="switchTab('preset', this)">📚 圓形百分圖教學範例 (喵喵國小)</button>
+        <button class="tab-btn" onclick="switchTab('custom', this)">✏️ 自訂圖表 (自由輸入)</button>
+    </div>
+
+    <div id="view-preset" class="tab-content active">
+        <div class="question-box">
+            <strong>📝 題目：</strong>請根據左側「喵喵國小」中、高年級參加淨灘活動的人數，計算出各年級所佔的百分率，並畫出圓形百分圖。
+        </div>
+
+        <div class="content-grid">
+            <div class="data-section">
+                <h3 class="section-title">📊 步驟一：數據統計</h3>
+                <table>
+                    <thead>
+                        <tr><th>年級</th><th>人數(人)</th><th>百分率(%)</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>三年級</td><td><input type="number" class="preset-input" value="0" min="0"></td><td class="preset-pct">0%</td></tr>
+                        <tr><td>四年級</td><td><input type="number" class="preset-input" value="0" min="0"></td><td class="preset-pct">0%</td></tr>
+                        <tr><td>五年級</td><td><input type="number" class="preset-input" value="0" min="0"></td><td class="preset-pct">0%</td></tr>
+                        <tr><td>六年級</td><td><input type="number" class="preset-input" value="0" min="0"></td><td class="preset-pct">0%</td></tr>
+                    </tbody>
+                    <tfoot>
+                        <tr class="total-row"><td>合計</td><td id="presetTotalCount">0</td><td>100%</td></tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="calc-section">
+                <h3 class="section-title">🧮 步驟二：計算過程</h3>
+                <div class="calc-box" id="presetCalcProcess"></div>
+            </div>
+            <div class="chart-box">
+                <h3 class="section-title">🥧 步驟三：圓形百分圖</h3>
+                <canvas id="presetCanvas" width="420" height="380"></canvas>
+                <div class="chart-title">喵喵國小中、高年級學生參加淨灘活動人數圓形百分圖</div>
+                <div class="legend" id="presetLegend"></div>
+                <button id="presetDrawBtn" class="action-btn">▶ 分解播放繪製過程</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-custom" class="tab-content">
+        <div class="question-box">
+            <strong>📝 自訂題目：</strong>
+            <input type="text" id="customTitleInput" value="六年喵喵班最喜歡的水果調查" style="width: 70%; font-size: 19px; font-family: inherit; font-weight: bold; border: 1px dashed #1976d2; background: transparent; padding: 4px;">
+        </div>
+
+        <div class="content-grid">
+            <div class="data-section">
+                <h3 class="section-title">📊 步驟一：數據統計</h3>
+                <button id="addCustomRowBtn" class="add-btn">➕ 新增項目</button>
+                <table>
+                    <thead>
+                        <tr><th>項目名稱</th><th>數量</th><th>百分率(%)</th><th>操作</th></tr>
+                    </thead>
+                    <tbody id="customTbody">
+                        </tbody>
+                    <tfoot>
+                        <tr class="total-row"><td colspan="1">合計</td><td id="customTotalCount">0</td><td>100%</td><td></td></tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div class="calc-section">
+                <h3 class="section-title">🧮 步驟二：計算過程</h3>
+                <div class="calc-box" id="customCalcProcess"></div>
+            </div>
+            <div class="chart-box">
+                <h3 class="section-title">🥧 步驟三：圓形百分圖</h3>
+                <canvas id="customCanvas" width="420" height="380"></canvas>
+                <div class="chart-title" id="customChartTitleDisplay">六甲班最喜歡的水果調查圓形百分圖</div>
+                <div class="legend" id="customLegend"></div>
+                <button id="customDrawBtn" class="action-btn">▶ 分解播放繪製過程</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const sleep = ms => new Promise(res => setTimeout(res, ms));
+
+    // ★ 為了讓兩個分頁不互相干擾，我們將繪圖邏輯封裝成一個強大的 Class
+    class PieChartApp {
+        constructor(config) {
+            this.config = config;
+            this.isDrawing = false;
+            this.chartData = [];
+            // 提供更多顏色供自訂項目使用
+            this.colors = ['#4DA8DA', '#82C09A', '#F2CB6C', '#E2856E', '#C39BD3', '#F7DC6F', '#76D7C4', '#F1948A', '#AAB7B8', '#F5B041'];
+
+            this.canvas = document.getElementById(config.canvasId);
+            this.ctx = this.canvas.getContext('2d');
+            this.cx = this.canvas.width / 2;
+            this.cy = this.canvas.height / 2;
+            this.radius = 150;
+
+            this.totalCountEl = document.getElementById(config.totalCountId);
+            this.calcProcessEl = document.getElementById(config.calcProcessId);
+            this.legendBox = document.getElementById(config.legendBoxId);
+            this.drawBtn = document.getElementById(config.drawBtnId);
+            
+            this.drawBtn.addEventListener('click', () => this.drawPieChartStepByStep());
+
+            if (this.config.isCustom) {
+                // 自訂模式：初始化資料結構
+                this.customItems = [
+                    { label: '蘋果', value: 0 },
+                    { label: '香蕉', value: 0 },
+                    { label: '西瓜', value: 0 }
+                ];
+                this.tbody = document.getElementById(config.tbodyId);
+                this.addBtn = document.getElementById(config.addBtnId);
+                
+                // 新增項目按鈕事件
+                this.addBtn.addEventListener('click', () => {
+                    if(this.customItems.length >= 10) { alert("最多只能新增 10 個項目喔！"); return; }
+                    this.customItems.push({ label: `新項目${this.customItems.length + 1}`, value: 0 });
+                    this.renderCustomTable();
+                });
+                
+                // 連動標題
+                this.titleInput = document.getElementById(config.titleInputId);
+                this.chartTitleDisplay = document.getElementById(config.chartTitleDisplayId);
+                this.titleInput.addEventListener('input', (e) => {
+                    this.chartTitleDisplay.textContent = (e.target.value || "自訂圓形百分圖") + "圓形百分圖";
+                });
+                
+                this.renderCustomTable();
+            } else {
+                // 預設模式：綁定寫死的 Input
+                this.inputs = document.querySelectorAll(config.inputSelector);
+                this.pctCells = document.querySelectorAll(config.pctCellSelector);
+                this.labels = config.presetLabels;
+                this.inputs.forEach(input => input.addEventListener('input', () => this.updateData()));
+                this.updateData();
+            }
+        }
+
+        // 渲染自訂表格
+        renderCustomTable() {
+            this.tbody.innerHTML = '';
+            this.customItems.forEach((item, idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><input type="text" class="custom-name" value="${item.label}" data-idx="${idx}" style="width: 60px;"></td>
+                    <td><input type="number" class="custom-val" value="${item.value}" min="0" data-idx="${idx}"></td>
+                    <td class="custom-pct">0%</td>
+                    <td><button class="del-btn" data-idx="${idx}" style="background:#e57373; color:white; border:none; border-radius:4px; cursor:pointer;">刪除</button></td>
+                `;
+                this.tbody.appendChild(tr);
+            });
+
+            // 重新綁定事件
+            this.inputs = this.tbody.querySelectorAll('.custom-val');
+            this.nameInputs = this.tbody.querySelectorAll('.custom-name');
+            this.pctCells = this.tbody.querySelectorAll('.custom-pct');
+            const delBtns = this.tbody.querySelectorAll('.del-btn');
+
+            this.inputs.forEach(input => input.addEventListener('input', (e) => {
+                this.customItems[e.target.dataset.idx].value = parseInt(e.target.value) || 0;
+                this.updateData();
+            }));
+            
+            this.nameInputs.forEach(input => input.addEventListener('input', (e) => {
+                this.customItems[e.target.dataset.idx].label = e.target.value || "未命名";
+                this.updateData();
+            }));
+            
+            delBtns.forEach(btn => btn.addEventListener('click', (e) => {
+                if(this.customItems.length <= 2) { alert("至少要保留兩個項目喔！"); return; }
+                this.customItems.splice(e.target.dataset.idx, 1);
+                this.renderCustomTable();
+            }));
+
+            this.updateData();
+        }
+
+        // 更新數據與計算邏輯
+        updateData() {
+            if (this.isDrawing) return; 
+            
+            let total = 0;
+            let values = [];
+            let currentLabels = [];
+            let maxVal = -1;
+            let maxIdx = -1;
+
+            if (this.config.isCustom) {
+                this.customItems.forEach((item, idx) => {
+                    values.push(item.value);
+                    currentLabels.push(item.label);
+                    total += item.value;
+                    if (item.value > maxVal) { maxVal = item.value; maxIdx = idx; }
+                });
+            } else {
+                currentLabels = this.labels;
+                this.inputs.forEach((input, idx) => {
+                    let val = parseInt(input.value) || 0;
+                    values.push(val);
+                    total += val;
+                    if (val > maxVal) { maxVal = val; maxIdx = idx; }
+                });
+            }
+
+            this.totalCountEl.textContent = total;
+            
+            let rawPcts = [];
+            values.forEach(val => {
+                rawPcts.push(total > 0 ? Math.round((val / total) * 100) : 0);
+            });
+
+            let sumPct = rawPcts.reduce((a, b) => a + b, 0);
+            let finalPcts = [...rawPcts];
+            let diff = 0;
+
+            if (total > 0 && sumPct !== 100 && sumPct !== 0) {
+                diff = 100 - sumPct;
+                finalPcts[maxIdx] += diff; 
+            }
+
+            let processHTML = '<strong>部分 ÷ 全部 = 小數 → 百分率</strong><br><br>';
+            this.chartData = [];
+
+            values.forEach((val, index) => {
+                let rawPct = rawPcts[index];
+                let finalPct = finalPcts[index];
+                let processStr = `${currentLabels[index]}: ${val} ÷ ${total}`;
+                
+                if (total > 0) {
+                    let rawDecimal = val / total;
+                    let isExact = Math.abs(rawDecimal - (rawPct / 100)) < 0.0001;
+                    let sign = isExact ? "=" : "&approx;";
+                    
+                    let displayDecimal = rawDecimal.toFixed(3);
+                    if (displayDecimal.endsWith('0')) { displayDecimal = rawDecimal.toFixed(2); }
+
+                    processStr += ` ${sign} ${displayDecimal} ${sign} ${rawPct}%`;
+                    if (index === maxIdx && diff !== 0) {
+                        processStr += ` <span style="color:#d32f2f; font-weight:bold;">(調整為 ${finalPct}%)</span>`;
+                    }
+                } else {
+                    processStr += ` = 0 = 0%`;
+                }
+                
+                if(this.pctCells[index]) this.pctCells[index].textContent = finalPct + '%';
+                processHTML += processStr + '<br><br>';
+                
+                // 循環取用顏色
+                let color = this.colors[index % this.colors.length];
+                this.chartData.push({ label: currentLabels[index], pct: finalPct, color: color });
+            });
+
+            if (diff !== 0) {
+                let action = diff > 0 ? "補給" : "扣除";
+                processHTML += `<div class="alert-box">
+                ⚠️ <strong>誤差調整說明：</strong><br>因四捨五入，原百分率加總為 ${sumPct}%。<br>為了滿足 100%，已將相差的 ${Math.abs(diff)}% <strong>${action}</strong> 最高比例項目。</div>`;
+            }
+
+            this.calcProcessEl.innerHTML = processHTML;
+            
+            this.legendBox.innerHTML = this.chartData.map(d => 
+                `<div class="legend-item"><div class="color-box" style="background:${d.color}"></div>${d.label}</div>`
+            ).join('');
+
+            this.drawFullChart();
+        }
+
+        // 畫 100 格底圖
+        drawBaseTicks() {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            this.ctx.beginPath();
+            this.ctx.arc(this.cx, this.cy, this.radius, 0, 2 * Math.PI);
+            this.ctx.strokeStyle = '#333';
+            this.ctx.lineWidth = 1;
+            this.ctx.stroke();
+
+            for (let i = 0; i < 100; i++) {
+                let angle = (i / 100) * 2 * Math.PI - (Math.PI / 2);
+                let isMajor = (i % 10 === 0);
+                let isMedium = (i % 5 === 0);
+                
+                let tickLength = isMajor ? 12 : (isMedium ? 8 : 4);
+                let tickWidth = isMajor ? 2 : 1;
+                
+                let x1 = this.cx + this.radius * Math.cos(angle);
+                let y1 = this.cy + this.radius * Math.sin(angle);
+                let x2 = this.cx + (this.radius + tickLength) * Math.cos(angle);
+                let y2 = this.cy + (this.radius + tickLength) * Math.sin(angle);
+
+                this.ctx.beginPath();
+                this.ctx.moveTo(x1, y1);
+                this.ctx.lineTo(x2, y2);
+                this.ctx.strokeStyle = '#555';
+                this.ctx.lineWidth = tickWidth;
+                this.ctx.stroke();
+                
+                if (isMajor) {
+                    let textRadius = this.radius + 22;
+                    let tx = this.cx + textRadius * Math.cos(angle);
+                    let ty = this.cy + textRadius * Math.sin(angle);
+                    this.ctx.font = "13px Arial";
+                    this.ctx.fillStyle = "#666";
+                    this.ctx.textAlign = "center";
+                    this.ctx.textBaseline = "middle";
+                    this.ctx.fillText(i === 0 ? "0" : i, tx, ty);
+                }
+            }
+        }
+
+        // 畫文字標籤
+        drawSliceLabel(data, startAngle, endAngle) {
+            if (data.pct === 0) return;
+            let midAngle = startAngle + (endAngle - startAngle) / 2;
+            let textRadius = this.radius * 0.65; 
+            
+            let tx = this.cx + textRadius * Math.cos(midAngle);
+            let ty = this.cy + textRadius * Math.sin(midAngle);
+
+            this.ctx.fillStyle = "#111"; 
+            this.ctx.font = "bold 15px 'Microsoft JhengHei', sans-serif";
+            this.ctx.textAlign = "center";
+            this.ctx.textBaseline = "middle";
+
+            this.ctx.fillText(data.label, tx, ty - 10); 
+            this.ctx.fillText(`${data.pct}%`, tx, ty + 10); 
+        }
+
+        // 靜態完整繪圖
+        drawFullChart() {
+            this.drawBaseTicks();
+            let startAngle = -Math.PI / 2;
+            
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.cx, this.cy);
+            this.ctx.lineTo(this.cx + this.radius * Math.cos(startAngle), this.cy + this.radius * Math.sin(startAngle));
+            this.ctx.strokeStyle = "#333";
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+
+            this.chartData.forEach(data => {
+                if (data.pct === 0) return;
+                let sliceAngle = (data.pct / 100) * 2 * Math.PI;
+                let endAngle = startAngle + sliceAngle;
+
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.cx, this.cy);
+                this.ctx.arc(this.cx, this.cy, this.radius, startAngle, endAngle);
+                this.ctx.closePath();
+                this.ctx.fillStyle = data.color;
+                this.ctx.fill();
+
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.cx, this.cy);
+                this.ctx.lineTo(this.cx + this.radius * Math.cos(endAngle), this.cy + this.radius * Math.sin(endAngle));
+                this.ctx.strokeStyle = "#333";
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+
+                this.drawSliceLabel(data, startAngle, endAngle);
+                startAngle = endAngle;
+            });
+        }
+
+        // 動畫繪圖引擎 (從圓心畫線、動態跳動數字)
+        async drawPieChartStepByStep() {
+            if (this.isDrawing || this.chartData.reduce((sum, d) => sum + d.pct, 0) === 0) return;
+            
+            this.isDrawing = true;
+            this.drawBtn.disabled = true;
+            if(this.inputs) this.inputs.forEach(input => input.disabled = true);
+            if(this.nameInputs) this.nameInputs.forEach(input => input.disabled = true);
+            if(this.addBtn) this.addBtn.disabled = true;
+            
+            let startAngle = -Math.PI / 2; 
+            let drawnSlices = []; 
+
+            const renderBackground = () => {
+                this.drawBaseTicks();
+                drawnSlices.forEach(slice => {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(this.cx, this.cy);
+                    this.ctx.arc(this.cx, this.cy, this.radius, slice.startAngle, slice.endAngle);
+                    this.ctx.closePath();
+                    this.ctx.fillStyle = slice.color;
+                    this.ctx.fill();
+
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(this.cx, this.cy);
+                    this.ctx.lineTo(this.cx + this.radius * Math.cos(slice.startAngle), this.cy + this.radius * Math.sin(slice.startAngle));
+                    this.ctx.strokeStyle = "#333";
+                    this.ctx.lineWidth = 2;
+                    this.ctx.stroke();
+
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(this.cx, this.cy);
+                    this.ctx.lineTo(this.cx + this.radius * Math.cos(slice.endAngle), this.cy + this.radius * Math.sin(slice.endAngle));
+                    this.ctx.strokeStyle = "#333";
+                    this.ctx.lineWidth = 2;
+                    this.ctx.stroke();
+
+                    this.drawSliceLabel(slice, slice.startAngle, slice.endAngle);
+                });
+            };
+
+            renderBackground();
+
+            let lineFrames = 15;
+            for (let f = 1; f <= lineFrames; f++) {
+                renderBackground();
+                let currentR = this.radius * (f / lineFrames);
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.cx, this.cy);
+                this.ctx.lineTo(this.cx + currentR * Math.cos(startAngle), this.cy + currentR * Math.sin(startAngle));
+                this.ctx.strokeStyle = "#333";
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+                await sleep(20);
+            }
+            await sleep(300);
+
+            for (let i = 0; i < this.chartData.length; i++) {
+                let data = this.chartData[i];
+                if (data.pct === 0) continue;
+
+                let sliceAngle = (data.pct / 100) * 2 * Math.PI;
+                let endAngle = startAngle + sliceAngle;
+                
+                let fillFrames = 30; 
+                for (let f = 1; f <= fillFrames; f++) {
+                    renderBackground();
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(this.cx, this.cy);
+                    this.ctx.lineTo(this.cx + this.radius * Math.cos(startAngle), this.cy + this.radius * Math.sin(startAngle));
+                    this.ctx.strokeStyle = "#333";
+                    this.ctx.lineWidth = 2;
+                    this.ctx.stroke();
+
+                    let currentEndAngle = startAngle + (sliceAngle * (f / fillFrames));
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(this.cx, this.cy);
+                    this.ctx.arc(this.cx, this.cy, this.radius, startAngle, currentEndAngle);
+                    this.ctx.closePath();
+                    this.ctx.fillStyle = data.color;
+                    this.ctx.fill();
+                    
+                    let currentPct = Math.round(data.pct * (f / fillFrames));
+                    let tempSlice = { label: data.label, pct: currentPct };
+                    this.drawSliceLabel(tempSlice, startAngle, endAngle);
+                    
+                    await sleep(20); 
+                }
+
+                for (let f = 1; f <= lineFrames; f++) {
+                    renderBackground();
+
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(this.cx, this.cy);
+                    this.ctx.arc(this.cx, this.cy, this.radius, startAngle, endAngle);
+                    this.ctx.closePath();
+                    this.ctx.fillStyle = data.color;
+                    this.ctx.fill();
+
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(this.cx, this.cy);
+                    this.ctx.lineTo(this.cx + this.radius * Math.cos(startAngle), this.cy + this.radius * Math.sin(startAngle));
+                    this.ctx.strokeStyle = "#333";
+                    this.ctx.lineWidth = 2;
+                    this.ctx.stroke();
+                    
+                    this.drawSliceLabel(data, startAngle, endAngle);
+
+                    let currentR = this.radius * (f / lineFrames);
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(this.cx, this.cy);
+                    this.ctx.lineTo(this.cx + currentR * Math.cos(endAngle), this.cy + currentR * Math.sin(endAngle));
+                    this.ctx.strokeStyle = "#333";
+                    this.ctx.lineWidth = 2;
+                    this.ctx.stroke();
+
+                    await sleep(20);
+                }
+
+                drawnSlices.push({
+                    ...data,
+                    startAngle: startAngle,
+                    endAngle: endAngle
+                });
+
+                startAngle = endAngle;
+                await sleep(500); 
+            }
+
+            this.isDrawing = false;
+            this.drawBtn.disabled = false;
+            if(this.inputs) this.inputs.forEach(input => input.disabled = false);
+            if(this.nameInputs) this.nameInputs.forEach(input => input.disabled = false);
+            if(this.addBtn) this.addBtn.disabled = false;
+        }
+    }
+
+    // 分頁切換功能
+    function switchTab(tabId, btnElement) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        
+        btnElement.classList.add('active');
+        document.getElementById('view-' + tabId).classList.add('active');
+    }
+
+    // 當網頁載入完成時，初始化兩個分頁的應用程式
+    document.addEventListener("DOMContentLoaded", () => {
+        
+        // 1. 初始化「預設教學範例」
+        new PieChartApp({
+            isCustom: false,
+            inputSelector: '#view-preset .preset-input',
+            pctCellSelector: '#view-preset .preset-pct',
+            presetLabels: ['三年級', '四年級', '五年級', '六年級'],
+            totalCountId: 'presetTotalCount',
+            calcProcessId: 'presetCalcProcess',
+            canvasId: 'presetCanvas',
+            legendBoxId: 'presetLegend',
+            drawBtnId: 'presetDrawBtn'
+        });
+
+        // 2. 初始化「自訂圖表功能」
+        new PieChartApp({
+            isCustom: true,
+            tbodyId: 'customTbody',
+            addBtnId: 'addCustomRowBtn',
+            titleInputId: 'customTitleInput',
+            chartTitleDisplayId: 'customChartTitleDisplay',
+            totalCountId: 'customTotalCount',
+            calcProcessId: 'customCalcProcess',
+            canvasId: 'customCanvas',
+            legendBoxId: 'customLegend',
+            drawBtnId: 'customDrawBtn'
+        });
+
+    });
+
+</script>
+</body>
+</html>
